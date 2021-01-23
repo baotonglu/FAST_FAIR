@@ -1,4 +1,5 @@
 #include "btree.h"
+#include "random.h"
 
 /*
  *  *file_exists -- checks if file exists
@@ -16,13 +17,14 @@ void clear_cache() {
   delete[] garbage;
 }
 
+size_t pool_size = 10UL*1024*1024*1024;
+
 // MAIN
 int main(int argc, char **argv) {
   // Parsing arguments
   int numData = 0;
   int n_threads = 1;
-  char *input_path = (char *)std::string("../sample_input.txt").data();
-  char *persistent_path;
+  char *persistent_path = "/mnt/pmem0/baotong/fast-fair.data";
 
   int c;
   while ((c = getopt(argc, argv, "n:w:t:i:p:")) != -1) {
@@ -33,12 +35,6 @@ int main(int argc, char **argv) {
     case 't':
       n_threads = atoi(optarg);
       break;
-    case 'i':
-      input_path = optarg;
-    case 'p':
-      persistent_path = optarg;
-    default:
-      break;
     }
   }
 
@@ -47,8 +43,8 @@ int main(int argc, char **argv) {
   PMEMobjpool *pop;
 
   if (file_exists(persistent_path) != 0) {
-    pop = pmemobj_create(persistent_path, "btree", 8000000000,
-                         0666); // make 1GB memory pool
+    pop = pmemobj_create(persistent_path, "btree", pool_size,
+                         0666); // make memory pool
     bt = POBJ_ROOT(pop, btree);
     D_RW(bt)->constructor(pop);
   } else {
@@ -61,6 +57,7 @@ int main(int argc, char **argv) {
   // Reading data
   entry_key_t *keys = new entry_key_t[numData];
 
+  /*
   ifstream ifs;
   ifs.open(input_path);
 
@@ -72,6 +69,15 @@ int main(int argc, char **argv) {
     ifs >> keys[i];
   }
   ifs.close();
+  */
+
+  // generate random keys
+  unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL}, length=4;
+  init_by_array64(init, length);
+
+  for(int i = 0; i < numData; ++i){
+    keys[i] = genrand64_int64();
+  }
 
   clock_gettime(CLOCK_MONOTONIC, &start);
 
