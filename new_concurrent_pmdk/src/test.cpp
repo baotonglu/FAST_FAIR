@@ -1,11 +1,5 @@
 #include "btree.h"
 #include "random.h"
-#include <string>
-
-/*
- *  *file_exists -- checks if file exists
- *   */
-static inline int file_exists(char const *file) { return access(file, F_OK); }
 
 void clear_cache() {
   // Remove cache
@@ -18,61 +12,35 @@ void clear_cache() {
   delete[] garbage;
 }
 
-size_t pool_size = 10UL*1024*1024*1024;
-
 // MAIN
 int main(int argc, char **argv) {
   // Parsing arguments
   int numData = 0;
   int n_threads = 1;
-  std::string persistent_path = "/mnt/pmem0/baotong/fast-fair.data";
-
+  //char *input_path = (char *)std::string("../sample_input.txt").data();
+  //intialize the memory pool
+  my_alloc::BasePMPool::intialize(pool_name, pool_size);
   int c;
-  while ((c = getopt(argc, argv, "n:w:t:i:p:")) != -1) {
+  while ((c = getopt(argc, argv, "n:w:t:i:")) != -1) {
     switch (c) {
     case 'n':
       numData = atoi(optarg);
       break;
     case 't':
       n_threads = atoi(optarg);
+    default:
       break;
     }
   }
 
-  // Make or Read persistent pool
-  TOID(btree) bt = TOID_NULL(btree);
-  PMEMobjpool *pop;
-
-  if (file_exists(persistent_path.c_str()) != 0) {
-    pop = pmemobj_create(persistent_path.c_str(), "btree", pool_size,
-                         0666); // make memory pool
-    bt = POBJ_ROOT(pop, btree);
-    D_RW(bt)->constructor(pop);
-  } else {
-    pop = pmemobj_open(persistent_path.c_str(), "btree");
-    bt = POBJ_ROOT(pop, btree);
-  }
+  btree *bt;
+  bt = reinterpret_cast<btree*>(my_alloc::BasePMPool::GetRoot(sizeof(btree)));
 
   struct timespec start, end, tmp;
 
   // Reading data
   entry_key_t *keys = new entry_key_t[numData];
 
-  /*
-  ifstream ifs;
-  ifs.open(input_path);
-
-  if (!ifs) {
-    cout << "input loading error!" << endl;
-  }
-
-  for (int i = 0; i < numData; ++i) {
-    ifs >> keys[i];
-  }
-  ifs.close();
-  */
-
-  // generate random keys
   unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL}, length=4;
   init_by_array64(init, length);
 
@@ -80,19 +48,26 @@ int main(int argc, char **argv) {
     keys[i] = genrand64_int64();
   }
 
+  // Initializing stats
+  clflush_cnt = 0;
+  search_time_in_insert = 0;
+  clflush_time_in_insert = 0;
+  gettime_cnt = 0;
+
   clock_gettime(CLOCK_MONOTONIC, &start);
 
   long half_num_data = numData / 2;
 
   // Warm-up! Insert half of input size
   for (int i = 0; i < half_num_data; ++i) {
-    D_RW(bt)->btree_insert(keys[i], (char *)keys[i]);
+    bt->btree_insert(keys[i], (char *)keys[i]);
   }
   cout << "Warm-up!" << endl;
 
   clock_gettime(CLOCK_MONOTONIC, &end);
   long long elapsedTime =
       (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);
+
   clear_cache();
 
   // Multithreading
@@ -111,7 +86,7 @@ int main(int argc, char **argv) {
     auto f = async(launch::async,
                    [&bt, &keys](int from, int to) {
                      for (int i = from; i < to; ++i)
-                       D_RW(bt)->btree_search(keys[i]);
+                       bt->btree_search(keys[i]);
                    },
                    from, to);
     futures.push_back(move(f));
@@ -125,7 +100,7 @@ int main(int argc, char **argv) {
       (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);
   cout << "Concurrent searching with " << n_threads
        << " threads (usec) : " << elapsedTime / 1000 << endl;
-  cout << "Throughput is " << (double)half_num_data / ((double) elapsedTime / (1000*1000)) << "Mops/s" <<std::endl; 
+  cout << "Throughput = " << (double)half_num_data / ((double)elapsedTime / (1000UL*1000*1000)) << "Mops/s" << std::endl;
 
   clear_cache();
   futures.clear();
@@ -140,7 +115,7 @@ int main(int argc, char **argv) {
     auto f = async(launch::async,
                    [&bt, &keys](int from, int to) {
                      for (int i = from; i < to; ++i)
-                       D_RW(bt)->btree_insert(keys[i], (char *)keys[i]);
+                       bt->btree_insert(keys[i], (char *)keys[i]);
                    },
                    from, to);
     futures.push_back(move(f));
@@ -154,6 +129,8 @@ int main(int argc, char **argv) {
       (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);
   cout << "Concurrent inserting with " << n_threads
        << " threads (usec) : " << elapsedTime / 1000 << endl;
+  cout << "Throughput = " << (double)half_num_data / ((double)elapsedTime / (1000UL*1000*1000)) << "Mops/s" << std::endl;
+
 #else
   clock_gettime(CLOCK_MONOTONIC, &start);
 
@@ -161,50 +138,44 @@ int main(int argc, char **argv) {
     int from = half_num_data + data_per_thread * tid;
     int to = (tid == n_threads - 1) ? numData : from + data_per_thread;
 
-    auto f = async(launch::async,
-                   [&bt, &keys, &half_num_data](int from, int to) {
-                     for (int i = from; i < to; ++i) {
-                       int sidx = i - half_num_data;
+    auto f = async(
+        launch::async,
+        [&bt, &keys, &half_num_data](int from, int to) {
+          for (int i = from; i < to; ++i) {
+            int sidx = i - half_num_data;
 
-                       int jid = i % 4;
-                       switch (jid) {
-                       case 0:
-                         D_RW(bt)->btree_insert(keys[i], (char *)keys[i]);
-                         for (int j = 0; j < 4; j++)
-                           D_RW(bt)->btree_search(
-                               keys[(sidx + j + jid * 8) % half_num_data]);
-                         D_RW(bt)->btree_delete(keys[i]);
-                         break;
-
-                       case 1:
-                         for (int j = 0; j < 3; j++)
-                           D_RW(bt)->btree_search(
-                               keys[(sidx + j + jid * 8) % half_num_data]);
-                         D_RW(bt)->btree_insert(keys[i], (char *)keys[i]);
-                         D_RW(bt)->btree_search(
-                             keys[(sidx + 3 + jid * 8) % half_num_data]);
-                         break;
-                       case 2:
-                         for (int j = 0; j < 2; j++)
-                           D_RW(bt)->btree_search(
-                               keys[(sidx + j + jid * 8) % half_num_data]);
-                         D_RW(bt)->btree_insert(keys[i], (char *)keys[i]);
-                         for (int j = 2; j < 4; j++)
-                           D_RW(bt)->btree_search(
-                               keys[(sidx + j + jid * 8) % half_num_data]);
-                         break;
-                       case 3:
-                         for (int j = 0; j < 4; j++)
-                           D_RW(bt)->btree_search(
-                               keys[(sidx + j + jid * 8) % half_num_data]);
-                         D_RW(bt)->btree_insert(keys[i], (char *)keys[i]);
-                         break;
-                       default:
-                         break;
-                       }
-                     }
-                   },
-                   from, to);
+            int jid = i % 4;
+            switch (jid) {
+            case 0:
+              bt->btree_insert(keys[i], (char *)keys[i]);
+              for (int j = 0; j < 4; j++)
+                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
+              bt->btree_delete(keys[i]);
+              break;
+            case 1:
+              for (int j = 0; j < 3; j++)
+                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
+              bt->btree_insert(keys[i], (char *)keys[i]);
+              bt->btree_search(keys[(sidx + 3 + jid * 8) % half_num_data]);
+              break;
+            case 2:
+              for (int j = 0; j < 2; j++)
+                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
+              bt->btree_insert(keys[i], (char *)keys[i]);
+              for (int j = 2; j < 4; j++)
+                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
+              break;
+            case 3:
+              for (int j = 0; j < 4; j++)
+                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
+              bt->btree_insert(keys[i], (char *)keys[i]);
+              break;
+            default:
+              break;
+            }
+          }
+        },
+        from, to);
     futures.push_back(move(f));
   }
 
@@ -217,10 +188,11 @@ int main(int argc, char **argv) {
       (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec);
   cout << "Concurrent inserting and searching with " << n_threads
        << " threads (usec) : " << elapsedTime / 1000 << endl;
+  cout << "Throughput = " << (double)half_num_data / ((double)elapsedTime / (1000UL*1000*1000)) << "Mops/s" << std::endl;
 #endif
 
+  delete bt;
   delete[] keys;
 
-  pmemobj_close(pop);
   return 0;
 }
