@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   int n_threads = 1;
   //char *input_path = (char *)std::string("../sample_input.txt").data();
   //intialize the memory pool
-  my_alloc::BasePMPool::intialize(pool_name, pool_size);
+  my_alloc::BasePMPool::Intialize(pool_name, pool_size);
   int c;
   while ((c = getopt(argc, argv, "n:w:t:i:")) != -1) {
     switch (c) {

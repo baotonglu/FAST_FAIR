@@ -403,7 +403,7 @@ public:
           //BT
           page *new_root;
           my_alloc::BasePMPool::ZAllocate((void**)&new_root, sizeof(page));
-          new new_root page(left_sibling, parent_key, this, hdr.level + 1);
+          new (new_root) page(left_sibling, parent_key, this, hdr.level + 1);
 
           bt->setNewRoot((char *)new_root);
         } else {
@@ -471,7 +471,7 @@ public:
           //BT
           page *new_root;
           my_alloc::BasePMPool::ZAllocate((void**)&new_root, sizeof(page));
-          new new_root page(left_sibling, parent_key, new_sibling, hdr.level + 1);
+          new (new_root) page(left_sibling, parent_key, new_sibling, hdr.level + 1);
           bt->setNewRoot((char *)new_root);
         } else {
           bt->btree_insert_internal((char *)left_sibling, parent_key,

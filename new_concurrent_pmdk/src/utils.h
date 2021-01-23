@@ -68,8 +68,6 @@ POBJ_LAYOUT_END(allocator)
 
 #define CHECK_BIT(var, pos) ((((var) & (1 << pos)) > 0) ? (1) : (0))
 
-inline void mfence(void) { asm volatile("mfence" ::: "memory"); }
-
 int msleep(uint64_t msec) {
   struct timespec ts;
   int res;

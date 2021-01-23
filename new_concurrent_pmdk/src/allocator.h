@@ -73,7 +73,7 @@ public:
     }
 
     static void* GetRoot(size_t size) {
-        return pmemobj_direct(pmemobj_root(instance_->pm_pool_, size));
+        return pmemobj_direct(pmemobj_root(->pm_pool_, size));
     }
 
 
@@ -121,20 +121,6 @@ public:
         }
     }
 
-    static void PREAllocate(void **ptr, size_t size){
-        if((all_allocated + size) > kAllTables){
-            printf("Exceed prealocate limit\n");
-            abort();
-        }
-
-        *ptr = reinterpret_cast<void *>(all_tables + all_allocated);
-        all_allocated += size;
-    }
-
-    static void PREFree(){
-        all_deallocated++;
-    }
-
 	static void Free(void* p){
         uint64_t ptr_value = (uint64_t)(p) - 48;
         p = (void*)(ptr_value); 
@@ -149,7 +135,6 @@ public:
 
 	
 PMEMobjpool* BasePMPool::pm_pool_ = nullptr;
-int BasePMPool::allocator_num = 0;
 PMEMoid BasePMPool::p_all_tables = OID_NULL;
 char* BasePMPool::all_tables = nullptr;
 uint64_t BasePMPool::all_allocated = 0;
