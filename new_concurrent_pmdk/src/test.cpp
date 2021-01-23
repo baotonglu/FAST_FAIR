@@ -35,6 +35,7 @@ int main(int argc, char **argv) {
 
   btree *bt;
   bt = reinterpret_cast<btree*>(my_alloc::BasePMPool::GetRoot(sizeof(btree)));
+  new (bt) btree();
 
   struct timespec start, end, tmp;
 
