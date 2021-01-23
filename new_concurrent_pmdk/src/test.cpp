@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
   cout << "Throughput = " << (double)half_num_data / ((double)elapsedTime / (1000UL*1000*1000)) << "Mops/s" << std::endl;
 #endif
 
-  delete bt;
+  //delete bt;
   delete[] keys;
 
   return 0;
