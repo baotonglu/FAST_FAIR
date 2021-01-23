@@ -33,14 +33,14 @@ int main(int argc, char **argv) {
     }
   }
 
-  btree *bt;
-  bt = reinterpret_cast<btree*>(my_alloc::BasePMPool::GetRoot(sizeof(btree)));
-  new (bt) btree();
+  btree<int64_t> *bt;
+  bt = reinterpret_cast<btree<int64_t>*>(my_alloc::BasePMPool::GetRoot(sizeof(btree<int64_t>)));
+  new (bt) btree<int64_t>();
 
   struct timespec start, end, tmp;
 
   // Reading data
-  entry_key_t *keys = new entry_key_t[numData];
+  int64_t *keys = new int64_t[numData];
 
   unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL}, length=4;
   init_by_array64(init, length);
