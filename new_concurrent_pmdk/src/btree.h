@@ -36,7 +36,7 @@
 
 #define IS_FORWARD(c) (c % 2 == 0)
 
-//susing entry_key_t = int64_t;
+using entry_key_t = int64_t;
 pthread_mutex_t print_mtx;
 
 static inline void cpu_pause() { __asm__ volatile("pause" ::: "memory"); }
@@ -144,8 +144,7 @@ public:
   friend class btree<T>;
 };
 
-const int cardinality = (PAGESIZE - sizeof(header<T>)) / sizeof(entry<T>);
-const int count_in_line = CACHE_LINE_SIZE / sizeof(entry<T>);
+const int cardinality = (PAGESIZE - sizeof(header<entry_key_t>)) / sizeof(entry<entry_key_t>);
 
 template<class T>
 class page {
@@ -953,7 +952,7 @@ btree<T>::btree() {
   //root = (char *)new page();
   page<T> *my_root;
   my_alloc::BasePMPool::ZAllocate((void**)&my_root, sizeof(page<T>));
-  new (my_root) page();
+  new (my_root) page<T>();
   root = (char*)my_root;
   height = 1;
 }
