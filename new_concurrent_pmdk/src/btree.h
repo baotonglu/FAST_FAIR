@@ -37,7 +37,6 @@
 #define IS_FORWARD(c) (c % 2 == 0)
 
 //susing entry_key_t = int64_t;
-
 pthread_mutex_t print_mtx;
 
 static inline void cpu_pause() { __asm__ volatile("pause" ::: "memory"); }
@@ -98,7 +97,7 @@ public:
   void btree_search_range(T, T, unsigned long *);
   void printAll();
 
-  friend class page;
+  friend class page<T>;
 };
 
 template<class T>
@@ -112,8 +111,8 @@ private:
   int16_t last_index;     // 2 bytes
   std::mutex *mtx;        // 8 bytes
 
-  friend class page;
-  friend class btree;
+  friend class page<T>;
+  friend class btree<T>;
 
 public:
   header() {
@@ -141,12 +140,12 @@ public:
     ptr = NULL;
   }
 
-  friend class page;
-  friend class btree;
+  friend class page<T>;
+  friend class btree<T>;
 };
 
-const int cardinality = (PAGESIZE - sizeof(header)) / sizeof(entry);
-const int count_in_line = CACHE_LINE_SIZE / sizeof(entry);
+const int cardinality = (PAGESIZE - sizeof(header<T>)) / sizeof(entry<T>);
+const int count_in_line = CACHE_LINE_SIZE / sizeof(entry<T>);
 
 template<class T>
 class page {
@@ -155,7 +154,7 @@ private:
   entry<T> records[cardinality]; // slots in persistent memory, 16 bytes * n
 
 public:
-  friend class btree;
+  friend class btree<T>;
 
   page(uint32_t level = 0) {
     hdr.level = level;
@@ -232,8 +231,8 @@ public:
         int remainder = records_ptr % CACHE_LINE_SIZE;
         bool do_flush =
             (remainder == 0) ||
-            ((((int)(remainder + sizeof(entry)) / CACHE_LINE_SIZE) == 1) &&
-             ((remainder + sizeof(entry)) % CACHE_LINE_SIZE) != 0);
+            ((((int)(remainder + sizeof(entry<T>)) / CACHE_LINE_SIZE) == 1) &&
+             ((remainder + sizeof(entry<T>)) % CACHE_LINE_SIZE) != 0);
         if (do_flush) {
           clflush((char *)records_ptr, CACHE_LINE_SIZE);
         }
@@ -548,8 +547,8 @@ public:
             int remainder = records_ptr % CACHE_LINE_SIZE;
             bool do_flush =
                 (remainder == 0) ||
-                ((((int)(remainder + sizeof(entry)) / CACHE_LINE_SIZE) == 1) &&
-                 ((remainder + sizeof(entry)) % CACHE_LINE_SIZE) != 0);
+                ((((int)(remainder + sizeof(entry<T>)) / CACHE_LINE_SIZE) == 1) &&
+                 ((remainder + sizeof(entry<T>)) % CACHE_LINE_SIZE) != 0);
             if (do_flush) {
               clflush((char *)records_ptr, CACHE_LINE_SIZE);
               to_flush_cnt = 0;
@@ -562,7 +561,7 @@ public:
           records[i + 1].ptr = ptr;
 
           if (flush)
-            clflush((char *)&records[i + 1], sizeof(entry));
+            clflush((char *)&records[i + 1], sizeof(entry<T>));
           inserted = 1;
           break;
         }
@@ -572,7 +571,7 @@ public:
         records[0].key = key;
         records[0].ptr = ptr;
         if (flush)
-          clflush((char *)&records[0], sizeof(entry));
+          clflush((char *)&records[0], sizeof(entry<T>));
       }
     }
 
@@ -658,7 +657,7 @@ public:
       else
         ++hdr.switch_counter;
       records[m].ptr = NULL;
-      clflush((char *)&records[m], sizeof(entry));
+      clflush((char *)&records[m], sizeof(entry<T>));
 
       hdr.last_index = m - 1;
       clflush((char *)&(hdr.last_index), sizeof(int16_t));
@@ -950,7 +949,7 @@ public:
  * class btree
  */
 template<class T>
-btree::btree() {
+btree<T>::btree() {
   //root = (char *)new page();
   page<T> *my_root;
   my_alloc::BasePMPool::ZAllocate((void**)&my_root, sizeof(page<T>));
@@ -960,14 +959,14 @@ btree::btree() {
 }
 
 template<class T>
-void btree::setNewRoot(char *new_root) {
+void btree<T>::setNewRoot(char *new_root) {
   this->root = (char *)new_root;
   clflush((char *)&(this->root), sizeof(char *));
   ++height;
 }
 
 template<class T>
-char *btree::btree_search(T key) {
+char *btree<T>::btree_search(T key) {
   page<T> *p = (page<T> *)root;
 
   while (p->hdr.leftmost_ptr != NULL) {
@@ -992,7 +991,7 @@ char *btree::btree_search(T key) {
 
 // insert the key in the leaf node
 template<class T>
-void btree::btree_insert(T key, char *right) { // need to be string
+void btree<T>::btree_insert(T key, char *right) { // need to be string
   page<T> *p = (page<T> *)root;
 
   while (p->hdr.leftmost_ptr != NULL) {
@@ -1006,7 +1005,7 @@ void btree::btree_insert(T key, char *right) { // need to be string
 
 // store the key into the node at the given level
 template<class T>
-void btree::btree_insert_internal(char *left, T key, char *right,
+void btree<T>::btree_insert_internal(char *left, T key, char *right,
                                   uint32_t level) {
   if (level > ((page<T> *)root)->hdr.level)
     return;
@@ -1022,7 +1021,7 @@ void btree::btree_insert_internal(char *left, T key, char *right,
 }
 
 template<class T>
-void btree::btree_delete(T key) {
+void btree<T>::btree_delete(T key) {
   page<T> *p = (page<T> *)root;
 
   while (p->hdr.leftmost_ptr != NULL) {
@@ -1046,7 +1045,7 @@ void btree::btree_delete(T key) {
 }
 
 template<class T>
-void btree::btree_delete_internal(T key, char *ptr, uint32_t level,
+void btree<T>::btree_delete_internal(T key, char *ptr, uint32_t level,
                                   T *deleted_key,
                                   bool *is_leftmost_node, page<T> **left_sibling) {
   if (level > ((page<T> *)this->root)->hdr.level)
@@ -1093,7 +1092,7 @@ void btree::btree_delete_internal(T key, char *ptr, uint32_t level,
 
 // Function to search keys from "min" to "max"
 template<class T>
-void btree::btree_search_range(T min, T max,
+void btree<T>::btree_search_range(T min, T max,
                                unsigned long *buf) {
   page<T> *p = (page<T> *)root;
 
@@ -1111,7 +1110,7 @@ void btree::btree_search_range(T min, T max,
 }
 
 template<class T>
-void btree::printAll() {
+void btree<T>::printAll() {
   pthread_mutex_lock(&print_mtx);
   int total_keys = 0;
   page<T> *leftmost = (page<T> *)root;
