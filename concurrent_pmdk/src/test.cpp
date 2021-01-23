@@ -1,5 +1,6 @@
 #include "btree.h"
 #include "random.h"
+#include <string>
 
 /*
  *  *file_exists -- checks if file exists
@@ -24,7 +25,7 @@ int main(int argc, char **argv) {
   // Parsing arguments
   int numData = 0;
   int n_threads = 1;
-  char *persistent_path = "/mnt/pmem0/baotong/fast-fair.data";
+  std::string persistent_path = "/mnt/pmem0/baotong/fast-fair.data";
 
   int c;
   while ((c = getopt(argc, argv, "n:w:t:i:p:")) != -1) {
@@ -42,13 +43,13 @@ int main(int argc, char **argv) {
   TOID(btree) bt = TOID_NULL(btree);
   PMEMobjpool *pop;
 
-  if (file_exists(persistent_path) != 0) {
-    pop = pmemobj_create(persistent_path, "btree", pool_size,
+  if (file_exists(persistent_path.c_str()) != 0) {
+    pop = pmemobj_create(persistent_path.c_str(), "btree", pool_size,
                          0666); // make memory pool
     bt = POBJ_ROOT(pop, btree);
     D_RW(bt)->constructor(pop);
   } else {
-    pop = pmemobj_open(persistent_path, "btree");
+    pop = pmemobj_open(persistent_path.c_str(), "btree");
     bt = POBJ_ROOT(pop, btree);
   }
 
