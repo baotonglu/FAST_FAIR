@@ -73,7 +73,7 @@ public:
     }
 
     static void* GetRoot(size_t size) {
-        return pmemobj_direct(pmemobj_root(->pm_pool_, size));
+        return pmemobj_direct(pmemobj_root(pm_pool_, size));
     }
 
 
