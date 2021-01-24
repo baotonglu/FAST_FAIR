@@ -89,12 +89,12 @@ public:
   btree();
   void setNewRoot(char *);
   void getNumberOfNodes();
-  void btree_insert(T, char *);
+  void insert(const T&, char *);
   void btree_insert_internal(char *, T, char *, uint32_t);
   void btree_delete(T);
   void btree_delete_internal(T, char *, uint32_t, T *,
                              bool *, page<T> **);
-  char *btree_search(T);
+  char *search(const T&) const;
   void btree_search_range(T, T, unsigned long *);
   void printAll();
 
@@ -966,7 +966,7 @@ void btree<T>::setNewRoot(char *new_root) {
 }
 
 template<class T>
-char *btree<T>::btree_search(T key) {
+char *btree<T>::search(const T& key) const {
   page<T> *p = (page<T> *)root;
 
   while (p->hdr.leftmost_ptr != NULL) {
@@ -991,7 +991,7 @@ char *btree<T>::btree_search(T key) {
 
 // insert the key in the leaf node
 template<class T>
-void btree<T>::btree_insert(T key, char *right) { // need to be string
+void btree<T>::insert(T key, char *right) { // need to be string
   page<T> *p = (page<T> *)root;
 
   while (p->hdr.leftmost_ptr != NULL) {
@@ -999,7 +999,7 @@ void btree<T>::btree_insert(T key, char *right) { // need to be string
   }
 
   if (!p->store(this, NULL, key, right, true, true)) { // store
-    btree_insert(key, right);
+    insert(key, right);
   }
 }
 

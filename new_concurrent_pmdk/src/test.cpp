@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 
   // Warm-up! Insert half of input size
   for (int i = 0; i < half_num_data; ++i) {
-    bt->btree_insert(keys[i], (char *)keys[i]);
+    bt->insert(keys[i], (char *)keys[i]);
   }
   cout << "Warm-up!" << endl;
 
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
     auto f = async(launch::async,
                    [&bt, &keys](int from, int to) {
                      for (int i = from; i < to; ++i)
-                       bt->btree_search(keys[i]);
+                       bt->search(keys[i]);
                    },
                    from, to);
     futures.push_back(move(f));
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
     auto f = async(launch::async,
                    [&bt, &keys](int from, int to) {
                      for (int i = from; i < to; ++i)
-                       bt->btree_insert(keys[i], (char *)keys[i]);
+                       bt->insert(keys[i], (char *)keys[i]);
                    },
                    from, to);
     futures.push_back(move(f));
@@ -148,28 +148,28 @@ int main(int argc, char **argv) {
             int jid = i % 4;
             switch (jid) {
             case 0:
-              bt->btree_insert(keys[i], (char *)keys[i]);
+              bt->insert(keys[i], (char *)keys[i]);
               for (int j = 0; j < 4; j++)
-                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
+                bt->search(keys[(sidx + j + jid * 8) % half_num_data]);
               bt->btree_delete(keys[i]);
               break;
             case 1:
               for (int j = 0; j < 3; j++)
-                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
-              bt->btree_insert(keys[i], (char *)keys[i]);
-              bt->btree_search(keys[(sidx + 3 + jid * 8) % half_num_data]);
+                bt->search(keys[(sidx + j + jid * 8) % half_num_data]);
+              bt->insert(keys[i], (char *)keys[i]);
+              bt->search(keys[(sidx + 3 + jid * 8) % half_num_data]);
               break;
             case 2:
               for (int j = 0; j < 2; j++)
-                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
-              bt->btree_insert(keys[i], (char *)keys[i]);
+                bt->search(keys[(sidx + j + jid * 8) % half_num_data]);
+              bt->insert(keys[i], (char *)keys[i]);
               for (int j = 2; j < 4; j++)
-                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
+                bt->search(keys[(sidx + j + jid * 8) % half_num_data]);
               break;
             case 3:
               for (int j = 0; j < 4; j++)
-                bt->btree_search(keys[(sidx + j + jid * 8) % half_num_data]);
-              bt->btree_insert(keys[i], (char *)keys[i]);
+                bt->search(keys[(sidx + j + jid * 8) % half_num_data]);
+              bt->insert(keys[i], (char *)keys[i]);
               break;
             default:
               break;
