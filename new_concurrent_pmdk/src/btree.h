@@ -1112,11 +1112,11 @@ void btree<T, P>::btree_search_range(T min, T max,
 }
 
 template<class T, class P>
-void btree<T, P>::bulk_load(const V[], int num) {
+void btree<T, P>::bulk_load(const V arr[], int num) {
   for (int i = 0; i < num; i++)
   {
     /* code */
-    insert(V[i].first, V[i].second);
+    insert(arr[i].first, arr[i].second);
   }
 }
 
