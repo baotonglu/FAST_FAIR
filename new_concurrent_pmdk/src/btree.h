@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <vector>
 #include "allocator.h"
+#include "tree.h"
 
 #define PAGESIZE 512
 
@@ -79,7 +80,7 @@ template <class T>
 class page;
 
 template <class T>
-class btree {
+class btree : public Tree<T, char*>{
 private:
   int height;
   char *root;
