@@ -84,7 +84,7 @@ class btree : public Tree<T, P>{
 private:
   int height;
   char *root;
-
+  typedef std::pair<T, P> V;
 public:
   btree();
   void setNewRoot(char *); // parameter is pointer to new root
@@ -95,6 +95,7 @@ public:
   void btree_delete_internal(T, P, uint32_t, T *,
                              bool *, page<T, P> **);
   P search(const T&) const;
+  void bulk_load(const V[], int);
   void btree_search_range(T, T, unsigned long *);
   void printAll();
 
@@ -1107,6 +1108,15 @@ void btree<T, P>::btree_search_range(T min, T max,
 
       break;
     }
+  }
+}
+
+template<class T, class P>
+void btree<T, P>::bulk_load(const V[], int num) {
+  for (int i = 0; i < num; i++)
+  {
+    /* code */
+    insert(V[i].first, V[i].second);
   }
 }
 
