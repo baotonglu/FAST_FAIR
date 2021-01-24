@@ -89,7 +89,7 @@ public:
   btree();
   void setNewRoot(char *); // parameter is pointer to new root
   void getNumberOfNodes();
-  void insert(const T&, const P&);
+  bool insert(const T&, const P&);
   void btree_insert_internal(char *, T, P, uint32_t);
   void btree_delete(T);
   void btree_delete_internal(T, P, uint32_t, T *,
@@ -145,7 +145,7 @@ public:
   friend class btree<T, P>;
 };
 
-const int cardinality = (PAGESIZE - sizeof(header<entry_key_t>)) / sizeof(entry<entry_key_t>);
+const int cardinality = (PAGESIZE - sizeof(header<entry_key_t, char*>)) / sizeof(entry<entry_key_t, char*>);
 
 template<class T, class P>
 class page {
@@ -991,7 +991,7 @@ P btree<T, P>::search(const T& key) const {
 
 // insert the key in the leaf node
 template<class T, class P>
-void btree<T, P>::insert(const T& key, P right) { // need to be string
+bool btree<T, P>::insert(const T& key, const P& right) { // need to be string
   page<T, P> *p = (page<T, P> *)root;
 
   while (p->hdr.leftmost_ptr != NULL) {
@@ -1001,6 +1001,7 @@ void btree<T, P>::insert(const T& key, P right) { // need to be string
   if (!p->store(this, NULL, key, right, true, true)) { // store
     insert(key, right);
   }
+  return true;
 }
 
 // store the key into the node at the given level
