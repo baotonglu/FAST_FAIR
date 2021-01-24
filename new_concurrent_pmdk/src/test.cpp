@@ -33,9 +33,9 @@ int main(int argc, char **argv) {
     }
   }
 
-  btree<int64_t> *bt;
-  bt = reinterpret_cast<btree<int64_t>*>(my_alloc::BasePMPool::GetRoot(sizeof(btree<int64_t>)));
-  new (bt) btree<int64_t>();
+  btree<int64_t, char*> *bt;
+  bt = reinterpret_cast<btree<int64_t, char*>*>(my_alloc::BasePMPool::GetRoot(sizeof(btree<int64_t, char*>)));
+  new (bt) btree<int64_t, char*>();
 
   struct timespec start, end, tmp;
 

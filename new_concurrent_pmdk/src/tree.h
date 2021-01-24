@@ -8,7 +8,7 @@ class Tree {
   typedef std::pair<T, P> V;
   virtual void bulk_load(const V[], int) = 0;
   virtual bool insert(const T&, const P&) = 0;
-  virtual P* search(const T&) const = 0;
+  virtual P search(const T&) const = 0;
   void print_min_max(){
 
   }
